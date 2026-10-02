@@ -5,7 +5,7 @@ import { notFound } from "@/lib/errors";
 import { audit } from "@/lib/events";
 import { api, page, pageQuery, parseBody, parseQuery } from "@/lib/http";
 
-type ModelName = "customer" | "location" | "carrier" | "vehicle" | "driver";
+type ModelName = "customer" | "location" | "carrier" | "vehicle" | "driver" | "serviceArea";
 
 /** Foreign keys a payload may carry, and the model each must belong to. */
 type References = Record<string, ModelName>;
@@ -21,7 +21,7 @@ export type CrudConfig = {
   filters?: (req: NextRequest) => Record<string, unknown>;
 };
 
-// The five master-data models share this shape; Prisma's per-model delegate
+// The master-data models share this shape; Prisma's per-model delegate
 // types cannot be expressed generically, hence the cast.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const delegate = (model: ModelName) => (prisma as any)[model];

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Download } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatMoney, formatNumber, titleCase, useApi } from "@/lib/client";
 import { useSession } from "@/components/Shell";
@@ -82,6 +83,15 @@ export default function AnalyticsPage() {
   const query = new URLSearchParams({ from });
   if (carrierId) query.set("carrierId", carrierId);
   const { data, error } = useApi<Analytics>(`/analytics/transportation?${query}`, { keepPreviousData: true });
+  // Same filters, served by the same endpoint as a spreadsheet download.
+  const csvHref = (table: "daily" | "carriers") =>
+    `/api/v1/analytics/transportation?${new URLSearchParams([...query, ["format", "csv"], ["table", table]])}`;
+  const exportLink = (table: "daily" | "carriers") => (
+    <a href={csvHref(table)} download className="inline-flex items-center gap-1 text-xs font-medium text-zinc-600 hover:text-zinc-900">
+      <Download className="h-3.5 w-3.5" aria-hidden />
+      Export CSV
+    </a>
+  );
 
   // Fill days with no deliveries so gaps in activity are visible.
   const daily = useMemo(() => {
@@ -140,7 +150,7 @@ export default function AnalyticsPage() {
             </div>
           )}
 
-          <Card title="Carrier performance" padded={false}>
+          <Card title="Carrier performance" padded={false} action={data.carriers.length > 0 && exportLink("carriers")}>
             {data.carriers.length === 0 ? (
               <EmptyState title="No carrier activity in this period" />
             ) : (
@@ -190,7 +200,7 @@ export default function AnalyticsPage() {
           </div>
 
           {data.daily.length > 0 && (
-            <Card title="Daily figures" padded={false}>
+            <Card title="Daily figures" padded={false} action={exportLink("daily")}>
               <Table right={[1, 2, 3, 4]} head={["Date (UTC)", "Delivered", "On-time", "Spend", "Distance"]}>
                 {[...data.daily].reverse().map((d) => (
                   <tr key={d.date}>

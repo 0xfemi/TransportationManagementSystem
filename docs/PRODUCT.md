@@ -68,7 +68,8 @@ Operate
   /exceptions         Feed; detail with owner, actions, timeline
   /analytics          KPIs, daily charts, carrier performance, method
 Network
-  /customers  /locations  /carriers  /carriers/:id  /vehicles  /drivers
+  /customers  /locations  /service-areas  /carriers  /carriers/:id  /vehicles  /drivers
+  /maintenance        Vehicle work orders; starting one takes the vehicle out of service
 Administration
   /users              Members, roles, permission matrix
   /audit-log

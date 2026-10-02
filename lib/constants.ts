@@ -23,7 +23,9 @@ export const EXCEPTION_TYPES = [
   "ROUTE_DISRUPTION",
   "OTHER",
 ] as const;
-export const SEVERITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
+export const MAINTENANCE_TYPES = ["INSPECTION", "SERVICE", "REPAIR", "TIRES", "BATTERY", "OTHER"] as const;
+export const MAINTENANCE_STATUSES = ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const;
+export const SEVERITIES =["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 export const EXCEPTION_STATUSES = ["OPEN", "INVESTIGATING", "RESOLVED", "IGNORED"] as const;
 export const DOCUMENT_TYPES = [
   "BILL_OF_LADING",

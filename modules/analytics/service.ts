@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { toCsv } from "@/lib/csv";
 
 /** A delivery this many minutes past its deadline still counts as on time. */
 export const ON_TIME_GRACE_MIN = 15;
@@ -182,4 +183,45 @@ export async function transportationAnalytics(organizationId: string, filter: An
       .sort((a, b) => b.count - a.count),
     methodology: METHODOLOGY,
   };
+}
+
+const round = (value: number | null, digits = 2) =>
+  value === null ? null : Math.round(value * 10 ** digits) / 10 ** digits;
+
+const SUMMARY_COLUMNS = [
+  "shipments",
+  "spend",
+  "distance_km",
+  "cost_per_shipment",
+  "cost_per_km",
+  "on_time_pct",
+  "deliveries_measured",
+  "avg_transit_hours",
+];
+
+type Analytics = Awaited<ReturnType<typeof transportationAnalytics>>;
+
+const summaryCells = (s: Omit<Analytics["daily"][number], "date">) => [
+  s.shipments,
+  round(s.spend),
+  round(s.distanceKm, 1),
+  round(s.costPerShipment),
+  round(s.costPerKm),
+  round(s.onTimePct, 1),
+  s.deliveriesMeasured,
+  round(s.avgTransitHours, 1),
+];
+
+/** One analytics table as CSV, with the same figures and method as the JSON. */
+export function analyticsCsv(result: Analytics, table: "daily" | "carriers"): string {
+  if (table === "carriers") {
+    return toCsv(
+      ["carrier", ...SUMMARY_COLUMNS, "tenders_answered", "tender_acceptance_pct"],
+      result.carriers.map((c) => [c.name, ...summaryCells(c), c.tendersAnswered, round(c.tenderAcceptancePct, 1)]),
+    );
+  }
+  return toCsv(
+    ["date", ...SUMMARY_COLUMNS],
+    result.daily.map((d) => [d.date, ...summaryCells(d)]),
+  );
 }

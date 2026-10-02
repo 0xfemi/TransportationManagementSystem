@@ -8,6 +8,7 @@ import {
   AlertOctagon,
   BarChart3,
   Building2,
+  CircleDot,
   ClipboardList,
   Gauge,
   History,
@@ -21,6 +22,7 @@ import {
   UserRound,
   Users,
   Waypoints,
+  Wrench,
   X,
 } from "lucide-react";
 import { apiFetch, useApi } from "@/lib/client";
@@ -59,8 +61,10 @@ const NAV: { heading: string; items: { href: string; label: string; icon: typeof
     items: [
       { href: "/customers", label: "Customers", icon: Building2, permission: "masterdata:read" },
       { href: "/locations", label: "Locations", icon: MapPin, permission: "masterdata:read" },
+      { href: "/service-areas", label: "Service areas", icon: CircleDot, permission: "masterdata:read" },
       { href: "/carriers", label: "Carriers", icon: Truck, permission: "masterdata:read" },
       { href: "/vehicles", label: "Vehicles", icon: Truck, permission: "masterdata:read" },
+      { href: "/maintenance", label: "Maintenance", icon: Wrench, permission: "masterdata:read" },
       { href: "/drivers", label: "Drivers", icon: UserRound, permission: "masterdata:read" },
     ],
   },

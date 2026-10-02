@@ -333,6 +333,16 @@ export async function routeGeometry(
   return (await getRoutingProvider().route(points, mode)).geometry;
 }
 
+/** A vehicle in the shop or retired cannot be given work. */
+function assertInService(vehicle: { name: string; status: string }) {
+  if (vehicle.status === "MAINTENANCE") {
+    throw conflict(`${vehicle.name} is in maintenance. Finish its work order or choose another vehicle.`);
+  }
+  if (vehicle.status === "INACTIVE") {
+    throw conflict(`${vehicle.name} is inactive. Reactivate it or choose another vehicle.`);
+  }
+}
+
 export async function planShipment(
   ctx: ServiceCtx,
   shipmentId: string,
@@ -350,6 +360,7 @@ export async function planShipment(
       })
     : null;
   if (input.vehicleId && !vehicle) throw notFound("Vehicle");
+  if (vehicle) assertInService(vehicle);
   if (input.driverId) {
     const driver = await prisma.driver.findFirst({
       where: { id: input.driverId, organizationId: ctx.organizationId, deletedAt: null },
@@ -585,6 +596,8 @@ export async function dispatchShipment(ctx: ServiceCtx, shipmentId: string) {
       throw conflict(`A ${shipment.status.toLowerCase().replace("_", " ")} shipment cannot be dispatched`);
     }
     if (shipment.vehicle) {
+      // It may have gone into the shop between planning and dispatch.
+      assertInService(shipment.vehicle);
       const busy = await tx.shipment.findFirst({
         where: {
           organizationId: ctx.organizationId,

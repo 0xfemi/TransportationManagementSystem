@@ -1,10 +1,11 @@
 import type { Prisma } from "@prisma/client";
 import type { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { conflict, notFound } from "@/lib/errors";
+import { conflict, notFound, unprocessable } from "@/lib/errors";
 import { audit, emitEvent, nextNumber } from "@/lib/events";
 import type { orderSchema, orderUpdateSchema } from "@/lib/schemas";
 import { clock, type ServiceCtx } from "@/modules/shipments/service";
+import { uncovered } from "@/modules/serviceAreas/coverage";
 
 export const orderInclude = {
   customer: { select: { id: true, name: true } },
@@ -31,6 +32,17 @@ export async function createOrder(ctx: ServiceCtx, input: z.infer<typeof orderSc
     ]);
     if (!customer) throw notFound("Customer");
     if (locations.length !== 2) throw notFound("Pickup or delivery location");
+
+    const areas = await tx.serviceArea.findMany({
+      where: { organizationId: ctx.organizationId, active: true, deletedAt: null },
+    });
+    const outside = uncovered(locations, areas);
+    if (outside.length) {
+      throw unprocessable(
+        `${outside.map((l) => l.name).join(" and ")} ${outside.length > 1 ? "are" : "is"} outside every active service area. Add or widen a service area, or choose another location.`,
+        { locations: outside.map((l) => ({ id: l.id, name: l.name })) },
+      );
+    }
 
     const number = await nextNumber(tx, ctx.organizationId, "order", "ORD");
     const { lines, ...fields } = input;

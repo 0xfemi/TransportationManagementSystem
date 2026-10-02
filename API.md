@@ -32,7 +32,21 @@ Cookie-authenticated requests that change data must carry an `Origin` header mat
 ## Endpoints
 
 ### Master data
-`/customers`, `/locations`, `/carriers`, `/vehicles`, `/drivers` — each supports `GET` (list), `POST`, `GET /{id}`, `PATCH /{id}`, `DELETE /{id}` (soft delete). `GET /carriers/{id}/scorecard` returns measured performance.
+`/customers`, `/locations`, `/carriers`, `/vehicles`, `/drivers`, `/service-areas` — each supports `GET` (list), `POST`, `GET /{id}`, `PATCH /{id}`, `DELETE /{id}` (soft delete). `GET /carriers/{id}/scorecard` returns measured performance.
+
+**Service areas** are circles (`latitude`, `longitude`, `radiusKm`, `active`). Once an organization has at least one active area, `POST /orders` returns `422` when the pickup or delivery location is outside all of them; `details.locations` names which. With no active areas, orders are not restricted.
+
+### Maintenance
+| | |
+|---|---|
+| `GET /maintenance` | Filter by `status` (`open` = scheduled or in progress), `vehicleId`, `q` |
+| `POST /maintenance` | `{ vehicleId, type, title, scheduledFor, vendor?, notes? }` |
+| `GET /maintenance/{id}` · `PATCH /maintenance/{id}` | Includes `history`; editable only while `SCHEDULED` |
+| `POST /maintenance/{id}/start` | Vehicle becomes `MAINTENANCE`. `409` if the vehicle is out on a dispatched shipment |
+| `POST /maintenance/{id}/complete` | `{ cost?, notes? }`. Vehicle returns to `AVAILABLE` once no other work is in progress |
+| `POST /maintenance/{id}/cancel` | `{ reason }` |
+
+While a vehicle is in maintenance or inactive, planning a shipment onto it and dispatching a shipment already planned onto it both return `409`.
 
 ### Orders
 | | |
@@ -91,7 +105,7 @@ Reportable `type` values: `LOCATION_UPDATE`, `IN_TRANSIT`, `ARRIVED_PICKUP`, `DE
 | `GET /exceptions/{id}` · `PATCH /exceptions/{id}` | `{ status?, ownerId?, severity?, resolutionNote? }` |
 | `GET /documents?entityType=&entityId=` · `POST /documents` | Upload is `multipart/form-data`: `file`, `entityType`, `entityId`, `type` |
 | `GET /documents/{id}` · `DELETE /documents/{id}` | Download is always an attachment |
-| `GET /analytics/transportation` | `from`, `to`, `carrierId`, `customerId` |
+| `GET /analytics/transportation` | `from`, `to`, `carrierId`, `customerId`. Add `format=csv` and `table=daily` or `table=carriers` to download that table as CSV |
 | `GET /command-center` | Live summary, map data, exception feed |
 
 ### Organization and audit
@@ -105,7 +119,7 @@ There are no webhooks yet. Poll the domain event log:
 GET /api/v1/events?since=2026-10-02T14:00:00Z&type=ShipmentDelayed
 ```
 
-Event types include `OrderCreated`, `ShipmentCreated`, `ShipmentPlanned`, `ShipmentTendered`, `TenderAccepted`, `TenderRejected`, `ShipmentDispatched`, `ShipmentDelayed`, `ShipmentDelivered`, `ShipmentCancelled`, `ProofOfDeliveryUploaded`, `ExceptionRaised`, `ExceptionClosed`. Events are immutable and carry the actor that caused them. Reading the log requires the `audit:read` permission.
+Event types include `OrderCreated`, `ShipmentCreated`, `ShipmentPlanned`, `ShipmentTendered`, `TenderAccepted`, `TenderRejected`, `ShipmentDispatched`, `ShipmentDelayed`, `ShipmentDelivered`, `ShipmentCancelled`, `ProofOfDeliveryUploaded`, `ExceptionRaised`, `ExceptionClosed`, `MaintenanceScheduled`, `MaintenanceStarted`, `MaintenanceCompleted`, `MaintenanceCancelled`. Events are immutable and carry the actor that caused them. Reading the log requires the `audit:read` permission.
 
 ## Health
 

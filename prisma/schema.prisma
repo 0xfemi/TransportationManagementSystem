@@ -149,6 +149,22 @@ enum ExceptionStatus {
   IGNORED
 }
 
+enum MaintenanceType {
+  INSPECTION
+  SERVICE
+  REPAIR
+  TIRES
+  BATTERY
+  OTHER
+}
+
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
 enum DocumentType {
   BILL_OF_LADING
   PROOF_OF_DELIVERY
@@ -314,12 +330,58 @@ model Vehicle {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  carrier      Carrier?   @relation(fields: [carrierId], references: [id])
-  homeLocation Location?  @relation(fields: [homeLocationId], references: [id])
-  drivers      Driver[]
-  shipments    Shipment[]
+  carrier           Carrier?           @relation(fields: [carrierId], references: [id])
+  homeLocation      Location?          @relation(fields: [homeLocationId], references: [id])
+  drivers           Driver[]
+  shipments         Shipment[]
+  maintenanceOrders MaintenanceOrder[]
 
   @@index([organizationId])
+}
+
+// A circle the organization serves. When an organization has at least one
+// active area, orders must start and end inside one; with none, nothing is
+// restricted. PostGIS polygons are the planned replacement.
+model ServiceArea {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  latitude       Float
+  longitude      Float
+  radiusKm       Float
+  active         Boolean   @default(true)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([organizationId])
+}
+
+// A vehicle work order. Starting one takes the vehicle out of service;
+// finishing or cancelling it returns the vehicle once no other work is open.
+model MaintenanceOrder {
+  id             String            @id @default(cuid())
+  organizationId String
+  number         String
+  vehicleId      String
+  type           MaintenanceType
+  status         MaintenanceStatus @default(SCHEDULED)
+  title          String
+  notes          String?
+  vendor         String?
+  scheduledFor   DateTime
+  startedAt      DateTime?
+  completedAt    DateTime?
+  cost           Float?
+  cancelReason   String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+  @@index([vehicleId])
 }
 
 model Driver {

@@ -5,6 +5,7 @@ import {
   customerSchema,
   driverSchema,
   locationSchema,
+  serviceAreaSchema,
   vehicleSchema,
 } from "@/lib/schemas";
 
@@ -53,6 +54,13 @@ export const vehicleCrud: CrudConfig = {
     const known = ["AVAILABLE", "IN_USE", "MAINTENANCE", "INACTIVE"].includes(status ?? "");
     return known ? { status } : {};
   },
+};
+
+export const serviceAreaCrud: CrudConfig = {
+  model: "serviceArea",
+  label: "service area",
+  schema: serviceAreaSchema,
+  searchFields: ["name"],
 };
 
 export const driverCrud: CrudConfig = {

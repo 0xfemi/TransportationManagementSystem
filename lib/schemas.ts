@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   DOCUMENT_TYPES,
   EXCEPTION_STATUSES,
+  MAINTENANCE_TYPES,
   EXCEPTION_TYPES,
   LOCATION_TYPES,
   MODES,
@@ -117,6 +118,39 @@ export const driverSchema = z.object({
   licenseNumber: optionalText(60),
   status: z.enum(["AVAILABLE", "OFF_DUTY", "INACTIVE"]).default("AVAILABLE"),
   vehicleId: optionalId,
+});
+
+export const serviceAreaSchema = z.object({
+  name: text(),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  radiusKm: z.number().min(0.1).max(5_000),
+  active: z.boolean().default(true),
+});
+
+// ── Maintenance ──
+
+export const maintenanceCreateSchema = z.object({
+  vehicleId: id,
+  type: z.enum(MAINTENANCE_TYPES),
+  title: text(200),
+  scheduledFor: dateTime,
+  vendor: optionalText(120),
+  notes: optionalText(2000),
+});
+
+/** Only a scheduled work order can be edited. */
+export const maintenanceUpdateSchema = z.object({
+  type: z.enum(MAINTENANCE_TYPES).optional(),
+  title: text(200).optional(),
+  scheduledFor: dateTime.optional(),
+  vendor: z.string().trim().max(120).nullable().optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
+});
+
+export const maintenanceCompleteSchema = z.object({
+  cost: money.nullish().transform((v) => v ?? null),
+  notes: optionalText(2000),
 });
 
 // ── Orders ──

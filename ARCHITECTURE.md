@@ -57,6 +57,7 @@ lib/                 Cross-cutting infrastructure: auth, RBAC, HTTP wrapper,
 modules/             Domain logic. No HTTP, no React.
   orders/  shipments/  planning/  routing/  rating/
   tracking/  exceptions/  documents/  analytics/  commandCenter/
+  maintenance/  serviceAreas/
 prisma/              Schema and demo seed.
 tests/               Unit and integration tests.
 docs/                Product, testing, competitive and open-source notes; ADRs.
@@ -93,7 +94,7 @@ erDiagram
   Shipment ||--o{ ShipmentException : raises
 ```
 
-Not drawn: `Document` (attached to a shipment, order or carrier by type + id), `DomainEvent`, `AuditLog`, `Counter`, `RateLimit`. The authoritative definition is [prisma/schema.prisma](prisma/schema.prisma).
+Not drawn: `MaintenanceOrder` (a vehicle work order), `ServiceArea` (a circle orders must start and end in, once any is active), `Document` (attached to a shipment, order or carrier by type + id), `DomainEvent`, `AuditLog`, `Counter`, `RateLimit`. The authoritative definition is [prisma/schema.prisma](prisma/schema.prisma).
 
 ### Lifecycles
 
@@ -105,6 +106,8 @@ Shipment:  DRAFT → PLANNED → TENDERED → ACCEPTED → DISPATCHED → IN_TRA
            any non-final state → CANCELLED (orders return to OPEN)
 Stop:      PENDING → ARRIVED → COMPLETED
 Exception: OPEN ⇄ INVESTIGATING → RESOLVED | IGNORED  (can be reopened)
+Maintenance: SCHEDULED → IN_PROGRESS → COMPLETED   (CANCELLED from either open state)
+           start sets the vehicle to MAINTENANCE; the last open work closing sets it back to AVAILABLE
 ```
 
 Transitions are enforced in the module services, inside database transactions; an illegal transition returns `409 Conflict` with a message saying what to do instead.

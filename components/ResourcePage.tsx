@@ -9,7 +9,8 @@ import { Button, Card, EmptyState, ErrorNote, Field, Modal, PageHeader, Spinner,
 export type FieldConfig = {
   name: string;
   label: string;
-  type?: "text" | "email" | "number" | "select";
+  /** "boolean" renders a Yes / No choice and submits true or false. */
+  type?: "text" | "email" | "number" | "select" | "boolean";
   required?: boolean;
   hint?: string;
   step?: string;
@@ -71,6 +72,8 @@ function ResourceForm({ config, row, onDone }: { config: ResourceConfig; row: an
       const raw = String(form.get(field.name) ?? "").trim();
       if (field.type === "number") {
         if (raw !== "") body[field.name] = Number(raw);
+      } else if (field.type === "boolean") {
+        body[field.name] = raw === "true";
       } else {
         body[field.name] = raw === "" ? null : raw;
       }
@@ -92,7 +95,12 @@ function ResourceForm({ config, row, onDone }: { config: ResourceConfig; row: an
         const initial = row?.[field.name] ?? field.defaultValue ?? "";
         return (
           <Field key={field.name} label={field.label} hint={field.hint} className={field.half ? "col-span-1" : "col-span-2"}>
-            {field.type === "select" ? (
+            {field.type === "boolean" ? (
+              <select name={field.name} defaultValue={String(initial)} className={inputClass}>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            ) : field.type === "select" ? (
               <select name={field.name} defaultValue={initial} required={field.required} className={inputClass}>
                 {!field.required && <option value="">None</option>}
                 {field.options?.map((o) => (
