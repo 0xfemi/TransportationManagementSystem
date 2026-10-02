@@ -8,6 +8,9 @@ import { hashPassword } from "@/lib/auth/password";
 import { sessionCookie, signSession } from "@/lib/auth/session";
 import { clientIp, rateLimit } from "@/lib/rateLimit";
 
+// Reads the key and the request at call time; never prerender this.
+export const dynamic = "force-dynamic";
+
 /** Shortest key accepted; anything weaker leaves the link switched off. */
 const MIN_KEY_LENGTH = 32;
 const DEFAULT_EMAIL = "admin@tms.local";
