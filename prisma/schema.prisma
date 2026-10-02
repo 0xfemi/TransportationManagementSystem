@@ -1,0 +1,20 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Transaction pooler (port 6543) for runtime queries.
+  url       = env("DATABASE_URL")
+  // Session mode (port 5432) for DDL: `prisma db push` and migrations cannot
+  // run through the transaction pooler.
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
