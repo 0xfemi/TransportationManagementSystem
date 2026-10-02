@@ -1,5 +1,18 @@
 import { z } from "zod";
-import { REPORTABLE_EVENTS } from "@/modules/tracking/service";
+import {
+  DOCUMENT_TYPES,
+  EXCEPTION_STATUSES,
+  EXCEPTION_TYPES,
+  LOCATION_TYPES,
+  MODES,
+  OBJECTIVE_VALUES,
+  PRIORITIES,
+  REPORTABLE_EVENTS,
+  ROLES,
+  SEVERITIES,
+} from "@/lib/constants";
+
+export * from "@/lib/constants";
 
 const text = (max = 200) => z.string().trim().min(1).max(max);
 const optionalText = (max = 200) =>
@@ -14,41 +27,6 @@ const optionalId = id.nullish().transform((v) => v ?? null);
 const money = z.number().min(0).max(1_000_000_000);
 const dateTime = z.coerce.date();
 const optionalDateTime = dateTime.nullish().transform((v) => v ?? null);
-
-export const ROLES = [
-  "ADMIN",
-  "LOGISTICS_MANAGER",
-  "PLANNER",
-  "DISPATCHER",
-  "FINANCE",
-  "ANALYST",
-  "DRIVER",
-] as const;
-export const MODES = ["ROAD", "AIR", "OCEAN", "RAIL", "COURIER", "MOTORCYCLE", "DRONE"] as const;
-export const LOCATION_TYPES = ["WAREHOUSE", "CUSTOMER", "DEPOT", "PORT", "AIRPORT", "OTHER"] as const;
-export const PRIORITIES = ["LOW", "NORMAL", "HIGH", "URGENT"] as const;
-export const OBJECTIVE_VALUES = ["cost", "distance", "time"] as const;
-export const EXCEPTION_TYPES = [
-  "LATE_SHIPMENT",
-  "MISSED_APPOINTMENT",
-  "CARRIER_REJECTION",
-  "TENDER_NOT_ACKNOWLEDGED",
-  "VEHICLE_BREAKDOWN",
-  "DAMAGED_SHIPMENT",
-  "ROUTE_DISRUPTION",
-  "OTHER",
-] as const;
-export const SEVERITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
-export const EXCEPTION_STATUSES = ["OPEN", "INVESTIGATING", "RESOLVED", "IGNORED"] as const;
-export const DOCUMENT_TYPES = [
-  "BILL_OF_LADING",
-  "PROOF_OF_DELIVERY",
-  "COMMERCIAL_INVOICE",
-  "PACKING_LIST",
-  "CARRIER_INVOICE",
-  "DELIVERY_RECEIPT",
-  "OTHER",
-] as const;
 
 // ── Auth & organization ──
 

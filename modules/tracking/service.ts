@@ -4,22 +4,11 @@ import { conflict, notFound, unprocessable } from "@/lib/errors";
 import { audit, emitEvent } from "@/lib/events";
 import { raiseException } from "@/modules/exceptions/service";
 import { addTrackingEvent, clock, type ServiceCtx } from "@/modules/shipments/service";
+import { REPORTABLE_EVENTS } from "@/lib/constants";
 import { projectEta } from "./eta";
 
 /** Lateness below this is treated as noise, not a delay. */
 export const DELAY_THRESHOLD_MIN = 15;
-
-/** Event types a driver, carrier or telematics feed may report. */
-export const REPORTABLE_EVENTS = [
-  "LOCATION_UPDATE",
-  "IN_TRANSIT",
-  "ARRIVED_PICKUP",
-  "DEPARTED_PICKUP",
-  "ARRIVED_DESTINATION",
-  "OUT_FOR_DELIVERY",
-  "DELIVERED",
-  "EXCEPTION",
-] as const satisfies readonly TrackingEventType[];
 
 export type ReportableEvent = (typeof REPORTABLE_EVENTS)[number];
 
