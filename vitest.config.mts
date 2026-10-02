@@ -24,6 +24,10 @@ export default defineConfig(({ mode }) => {
         TEST_DATABASE_URL: testDatabaseUrl,
         AUTH_SECRET: "test-secret-test-secret-test-secret-0000",
         ROUTING_PROVIDER: "haversine",
+        // A developer's own access link in .env must not leak into tests,
+        // which switch it on and off themselves.
+        ADMIN_ACCESS_KEY: "",
+        ADMIN_ACCESS_EMAIL: "",
       },
     },
   };
