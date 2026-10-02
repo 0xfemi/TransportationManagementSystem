@@ -50,6 +50,10 @@ npm run dev
 
 More in [DEVELOPMENT.md](DEVELOPMENT.md).
 
+### Admin access link
+
+Set `ADMIN_ACCESS_KEY` (32+ characters) and, optionally, `ADMIN_ACCESS_EMAIL`. Then `/api/v1/auth/access?key=<ADMIN_ACCESS_KEY>` signs you in as that admin without a password; on an empty database it creates the organization and admin first. Whoever has the link is an admin, so keep it private; changing the key revokes it. Every use is recorded in the audit log.
+
 ## Try the full flow
 
 1. **Orders** → New order.
