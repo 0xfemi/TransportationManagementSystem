@@ -11,10 +11,603 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Enums â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+enum Role {
+  ADMIN
+  LOGISTICS_MANAGER
+  PLANNER
+  DISPATCHER
+  FINANCE
+  ANALYST
+  DRIVER
+}
+
+enum LocationType {
+  WAREHOUSE
+  CUSTOMER
+  DEPOT
+  PORT
+  AIRPORT
+  OTHER
+}
+
+enum TransportMode {
+  ROAD
+  AIR
+  OCEAN
+  RAIL
+  COURIER
+  MOTORCYCLE
+  DRONE
+}
+
+enum CarrierStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  IN_USE
+  MAINTENANCE
+  INACTIVE
+}
+
+enum DriverStatus {
+  AVAILABLE
+  ON_DUTY
+  OFF_DUTY
+  INACTIVE
+}
+
+enum OrderStatus {
+  OPEN
+  PLANNED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum OrderPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum ShipmentStatus {
+  DRAFT
+  PLANNED
+  TENDERED
+  ACCEPTED
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum TenderStatus {
+  SENT
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum StopType {
+  PICKUP
+  DELIVERY
+}
+
+enum StopStatus {
+  PENDING
+  ARRIVED
+  COMPLETED
+}
+
+enum TrackingEventType {
+  CREATED
+  PLANNED
+  TENDERED
+  ACCEPTED
+  REJECTED
+  DISPATCHED
+  ARRIVED_PICKUP
+  DEPARTED_PICKUP
+  IN_TRANSIT
+  LOCATION_UPDATE
+  ARRIVED_DESTINATION
+  OUT_FOR_DELIVERY
+  DELIVERED
+  POD_RECEIVED
+  EXCEPTION
+  CANCELLED
+}
+
+enum ExceptionType {
+  LATE_SHIPMENT
+  MISSED_APPOINTMENT
+  CARRIER_REJECTION
+  TENDER_NOT_ACKNOWLEDGED
+  VEHICLE_BREAKDOWN
+  DAMAGED_SHIPMENT
+  ROUTE_DISRUPTION
+  OTHER
+}
+
+enum ExceptionSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ExceptionStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  IGNORED
+}
+
+enum DocumentType {
+  BILL_OF_LADING
+  PROOF_OF_DELIVERY
+  COMMERCIAL_INVOICE
+  PACKING_LIST
+  CARRIER_INVOICE
+  DELIVERY_RECEIPT
+  OTHER
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Identity & organizations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Organization {
+  id           String   @id @default(cuid())
+  name         String
+  currency     String   @default("USD")
+  timezone     String   @default("UTC")
+  distanceUnit String   @default("km")
+  weightUnit   String   @default("kg")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships Membership[]
+  apiKeys     ApiKey[]
+}
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships Membership[]
+}
+
+model Membership {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  role           Role
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model ApiKey {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  role           Role
+  prefix         String
+  // SHA-256 of the full key. The key itself is shown once and never stored.
+  keyHash        String    @unique
+  createdById    String?
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Master data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Customer {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  email          String?
+  phone          String?
+  notes          String?
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  locations Location[]
+  orders    Order[]
+
+  @@index([organizationId])
+}
+
+model Location {
+  id             String       @id @default(cuid())
+  organizationId String
+  type           LocationType @default(OTHER)
+  name           String
+  // Free-form on purpose: address formats differ by country and are often
+  // incomplete, so coordinates are the source of truth for routing.
+  addressLine    String?
+  city           String?
+  region         String?
+  postalCode     String?
+  country        String?
+  latitude       Float
+  longitude      Float
+  customerId     String?
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  customer Customer? @relation(fields: [customerId], references: [id])
+
+  ordersPickup   Order[]   @relation("OrderPickup")
+  ordersDelivery Order[]   @relation("OrderDelivery")
+  stops          Stop[]
+  vehicles       Vehicle[]
+
+  @@index([organizationId])
+}
+
+model Carrier {
+  id               String          @id @default(cuid())
+  organizationId   String
+  name             String
+  code             String?
+  email            String?
+  phone            String?
+  status           CarrierStatus   @default(ACTIVE)
+  modes            TransportMode[]
+  // Contract rate used by the rating engine. All amounts in the
+  // organization's currency.
+  baseRate         Float           @default(0)
+  ratePerKm        Float           @default(0)
+  ratePerKg        Float           @default(0)
+  minimumCharge    Float           @default(0)
+  fuelSurchargePct Float           @default(0)
+  deletedAt        DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  vehicles  Vehicle[]
+  shipments Shipment[]
+  tenders   Tender[]
+
+  @@index([organizationId])
+}
+
+model Vehicle {
+  id             String        @id @default(cuid())
+  organizationId String
+  name           String
+  registration   String?
+  vehicleType    String        @default("Truck")
+  mode           TransportMode @default(ROAD)
+  capacityKg     Float
+  capacityM3     Float
+  costPerKm      Float         @default(0)
+  fixedCost      Float         @default(0)
+  status         VehicleStatus @default(AVAILABLE)
+  carrierId      String?
+  homeLocationId String?
+  lastLatitude   Float?
+  lastLongitude  Float?
+  lastSeenAt     DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  carrier      Carrier?   @relation(fields: [carrierId], references: [id])
+  homeLocation Location?  @relation(fields: [homeLocationId], references: [id])
+  drivers      Driver[]
+  shipments    Shipment[]
+
+  @@index([organizationId])
+}
+
+model Driver {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  phone          String?
+  licenseNumber  String?
+  status         DriverStatus @default(AVAILABLE)
+  vehicleId      String?
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  vehicle   Vehicle?   @relation(fields: [vehicleId], references: [id])
+  shipments Shipment[]
+
+  @@index([organizationId])
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Orders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Order {
+  id                  String        @id @default(cuid())
+  organizationId      String
+  number              String
+  customerId          String
+  pickupLocationId    String
+  deliveryLocationId  String
+  status              OrderStatus   @default(OPEN)
+  priority            OrderPriority @default(NORMAL)
+  pickupWindowStart   DateTime?
+  pickupWindowEnd     DateTime?
+  deliveryWindowStart DateTime?
+  deliveryWindowEnd   DateTime?
+  totalWeightKg       Float         @default(0)
+  totalVolumeM3       Float         @default(0)
+  reference           String?
+  notes               String?
+  shipmentId          String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  customer         Customer    @relation(fields: [customerId], references: [id])
+  pickupLocation   Location    @relation("OrderPickup", fields: [pickupLocationId], references: [id])
+  deliveryLocation Location    @relation("OrderDelivery", fields: [deliveryLocationId], references: [id])
+  shipment         Shipment?   @relation(fields: [shipmentId], references: [id])
+  lines            OrderLine[]
+  stops            Stop[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+  @@index([shipmentId])
+}
+
+model OrderLine {
+  id          String  @id @default(cuid())
+  orderId     String
+  sku         String?
+  description String
+  quantity    Float
+  weightKg    Float   @default(0)
+  volumeM3    Float   @default(0)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Shipments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Shipment {
+  id                 String         @id @default(cuid())
+  organizationId     String
+  number             String
+  status             ShipmentStatus @default(DRAFT)
+  mode               TransportMode  @default(ROAD)
+  carrierId          String?
+  vehicleId          String?
+  driverId           String?
+  plannedStart       DateTime?
+  plannedEnd         DateTime?
+  actualStart        DateTime?
+  actualEnd          DateTime?
+  plannedDistanceKm  Float?
+  plannedDurationMin Float?
+  // Ordered [lat, lng] pairs of the planned route, for the map.
+  routeGeometry      Json?
+  routingProvider    String?
+  // Where the vehicle starts from, when that is not the first stop.
+  originLatitude     Float?
+  originLongitude    Float?
+  estimatedCost      Float?
+  actualCost         Float?
+  // Itemised charges: [{ code, label, calculation, amount }].
+  costBreakdown      Json?
+  totalWeightKg      Float          @default(0)
+  totalVolumeM3      Float          @default(0)
+  currentLatitude    Float?
+  currentLongitude   Float?
+  lastPositionAt     DateTime?
+  currentEta         DateTime?
+  delayMinutes       Int            @default(0)
+  cancelReason       String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  carrier        Carrier?            @relation(fields: [carrierId], references: [id])
+  vehicle        Vehicle?            @relation(fields: [vehicleId], references: [id])
+  driver         Driver?             @relation(fields: [driverId], references: [id])
+  orders         Order[]
+  stops          Stop[]
+  trackingEvents TrackingEvent[]
+  tenders        Tender[]
+  exceptions     ShipmentException[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+}
+
+model Stop {
+  id               String     @id @default(cuid())
+  organizationId   String
+  shipmentId       String
+  sequence         Int
+  type             StopType
+  locationId       String
+  orderId          String?
+  status           StopStatus @default(PENDING)
+  serviceMinutes   Int        @default(15)
+  windowStart      DateTime?
+  windowEnd        DateTime?
+  plannedArrival   DateTime?
+  plannedDeparture DateTime?
+  estimatedArrival DateTime?
+  actualArrival    DateTime?
+  actualDeparture  DateTime?
+  // Planned travel from the previous stop (or the shipment origin).
+  legDistanceKm    Float?
+  legDurationMin   Float?
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id])
+  order    Order?   @relation(fields: [orderId], references: [id])
+
+  @@index([shipmentId, sequence])
+  @@index([organizationId])
+}
+
+model Tender {
+  id             String       @id @default(cuid())
+  organizationId String
+  shipmentId     String
+  carrierId      String
+  status         TenderStatus @default(SENT)
+  quotedCost     Float?
+  sentAt         DateTime     @default(now())
+  respondedAt    DateTime?
+  responseNote   String?
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  carrier  Carrier  @relation(fields: [carrierId], references: [id])
+
+  @@index([organizationId, carrierId])
+  @@index([shipmentId])
+}
+
+// Append-only. Rows are never updated or deleted by the application.
+model TrackingEvent {
+  id             String            @id @default(cuid())
+  organizationId String
+  shipmentId     String
+  type           TrackingEventType
+  occurredAt     DateTime
+  recordedAt     DateTime          @default(now())
+  latitude       Float?
+  longitude      Float?
+  speedKph       Float?
+  heading        Float?
+  stopId         String?
+  message        String?
+  // Where the event came from: "system", "user", "api", "simulator", ...
+  source         String
+  actorId        String?
+  // Sender-supplied id used to drop duplicate deliveries.
+  externalId     String?
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, externalId])
+  @@index([shipmentId, occurredAt])
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Exceptions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model ShipmentException {
+  id                String            @id @default(cuid())
+  organizationId    String
+  shipmentId        String?
+  type              ExceptionType
+  severity          ExceptionSeverity
+  status            ExceptionStatus   @default(OPEN)
+  title             String
+  impact            String
+  recommendedAction String
+  ownerId           String?
+  // One open exception per (shipment, cause); repeat detections update it.
+  dedupeKey         String?
+  // Measured value behind the exception, e.g. minutes late.
+  metricValue       Int?
+  detectedAt        DateTime          @default(now())
+  resolvedAt        DateTime?
+  resolutionNote    String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  shipment Shipment? @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, dedupeKey])
+  @@index([organizationId, status])
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Documents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model Document {
+  id             String       @id @default(cuid())
+  organizationId String
+  entityType     String
+  entityId       String
+  type           DocumentType
+  filename       String
+  contentType    String
+  sizeBytes      Int
+  data           Bytes
+  uploadedById   String?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, entityType, entityId])
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Events, audit, infrastructure â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+// Append-only domain events (ShipmentCreated, TenderAccepted, ...).
+model DomainEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  type           String
+  entityType     String
+  entityId       String
+  payload        Json
+  actorType      String
+  actorId        String?
+  occurredAt     DateTime @default(now())
+
+  @@index([organizationId, occurredAt])
+  @@index([organizationId, entityType, entityId])
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  actorType      String
+  actorId        String?
+  actorLabel     String?
+  action         String
+  entityType     String
+  entityId       String
+  summary        String
+  before         Json?
+  after          Json?
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, entityType, entityId])
+}
+
+model Counter {
+  organizationId String
+  key            String
+  value          Int    @default(0)
+
+  @@id([organizationId, key])
+}
+
+model RateLimit {
+  key         String   @id
+  count       Int
+  windowStart DateTime
 }

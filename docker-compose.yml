@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4-alpine
+    environment:
+      POSTGRES_USER: tms
+      POSTGRES_PASSWORD: tms
+      POSTGRES_DB: tms
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - tms_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tms -d tms"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://tms:tms@db:5432/tms
+      DIRECT_URL: postgresql://tms:tms@db:5432/tms
+      # Local-only default so `docker compose up` works out of the box.
+      # Set AUTH_SECRET yourself for anything reachable by other people.
+      AUTH_SECRET: ${AUTH_SECRET:-local-development-secret-change-me-32chars}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      ALLOW_INSECURE_COOKIES: "true"
+    ports:
+      - "${APP_PORT:-3000}:3000"
+
+volumes:
+  tms_db:
