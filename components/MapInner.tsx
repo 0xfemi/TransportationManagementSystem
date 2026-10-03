@@ -5,6 +5,7 @@ import Link from "next/link";
 import L from "leaflet";
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { UserLocation } from "./UserLocation";
 
 export type MapMarker = {
   id: string;
@@ -112,6 +113,7 @@ export default function MapInner({
     >
       <TileLayer url={TILE_URL} attribution={ATTRIBUTION} />
       <FitBounds points={points} fitKey={key} />
+      <UserLocation />
       {lines.map((line) => (
         <Polyline key={line.id} positions={line.points} pathOptions={LINE_STYLE[line.tone ?? "planned"]} />
       ))}
